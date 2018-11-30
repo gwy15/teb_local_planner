@@ -63,7 +63,7 @@
 #include <costmap_converter/ObstacleMsg.h>
 
 // transforms
-static_assert(ROS_VERSION_MAJOR == 1);
+static_assert(ROS_VERSION_MAJOR == 1, "This code only works in ROS 1.");
 #if ROS_VERSION_MINOR == 14 // melodic
   #include <tf2/utils.h>
   #include <tf2_ros/buffer.h>
