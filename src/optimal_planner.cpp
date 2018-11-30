@@ -154,10 +154,17 @@ boost::shared_ptr<g2o::SparseOptimizer> TebOptimalPlanner::initOptimizer()
 
   // allocating the optimizer
   boost::shared_ptr<g2o::SparseOptimizer> optimizer = boost::make_shared<g2o::SparseOptimizer>();
+#if ROS_VERSION_MINOR == 14
   std::unique_ptr<TEBLinearSolver> linear_solver(new TEBLinearSolver()); // see typedef in optimization.h
   linear_solver->setBlockOrdering(true);
   std::unique_ptr<TEBBlockSolver> block_solver(new TEBBlockSolver(std::move(linear_solver)));
   g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(std::move(block_solver));
+#else
+  TEBLinearSolver* linearSolver = new TEBLinearSolver(); // see typedef in optimization.h
+  linearSolver->setBlockOrdering(true);
+  TEBBlockSolver* blockSolver = new TEBBlockSolver(linearSolver);
+  g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(blockSolver);
+#endif
 
   optimizer->setAlgorithm(solver);
   
@@ -909,8 +916,13 @@ void TebOptimalPlanner::AddEdgesKinematicsDiffDrive()
 
 void TebOptimalPlanner::AddEdgesKinematicsCarlike()
 {
+#if ROS_VERSION_MINOR == 14
   if (cfg_->optim.weight_kinematics_nh==0 && cfg_->optim.weight_kinematics_turning_radius)
     return; // if weight equals zero skip adding edges!
+#else
+  if (cfg_->optim.weight_kinematics_nh==0 && cfg_->optim.weight_kinematics_turning_radius==0)
+    return; // if weight equals zero skip adding edges!
+#endif
 
   // create edge for satisfiying kinematic constraints
   Eigen::Matrix<double,2,2> information_kinematics;

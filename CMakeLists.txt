@@ -5,26 +5,47 @@ project(teb_local_planner)
 set(CMAKE_BUILD_TYPE Release) #None, Debug, Release, RelWithDebInfo, MinSizeRel
 
 ## Find catkin macros and libraries
-find_package(catkin REQUIRED COMPONENTS
-  base_local_planner
-  costmap_2d
-  costmap_converter
-  cmake_modules
-  dynamic_reconfigure
-  geometry_msgs
-  interactive_markers
-  message_generation
-  nav_core
-  nav_msgs
-  roscpp
-  std_msgs
-  pluginlib
-  tf2
-  tf2_eigen
-  tf2_geometry_msgs
-  tf2_ros
-  visualization_msgs
-)
+if($ENV{ROS_DISTRO} STREQUAL "melodic")
+  find_package(catkin REQUIRED COMPONENTS
+    base_local_planner
+    costmap_2d
+    costmap_converter
+    cmake_modules
+    dynamic_reconfigure
+    geometry_msgs
+    interactive_markers
+    message_generation
+    nav_core
+    nav_msgs
+    roscpp
+    std_msgs
+    pluginlib
+    tf2
+    tf2_eigen
+    tf2_geometry_msgs
+    tf2_ros
+    visualization_msgs
+  )
+elseif($ENV{ROS_DISTRO} STREQUAL "kinetic")
+  find_package(catkin REQUIRED COMPONENTS
+    base_local_planner
+    costmap_2d
+    costmap_converter
+    cmake_modules
+    dynamic_reconfigure
+    geometry_msgs
+    interactive_markers
+    message_generation
+    nav_core
+    nav_msgs
+    roscpp
+    std_msgs
+    pluginlib
+    tf
+    tf_conversions
+    visualization_msgs
+  )
+endif()
 message(STATUS "System: ${CMAKE_SYSTEM}")
 ## System dependencies are found with CMake's conventions
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake_modules)
@@ -142,28 +163,51 @@ generate_dynamic_reconfigure_options(
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
+if($ENV{ROS_DISTRO} STREQUAL "melodic")
+  catkin_package(
+    INCLUDE_DIRS include ${EXTERNAL_INCLUDE_DIRS}
+    LIBRARIES teb_local_planner ${EXTERNAL_LIBS}
+    CATKIN_DEPENDS
+    base_local_planner
+    costmap_2d
+    costmap_converter
+    dynamic_reconfigure
+    geometry_msgs
+    interactive_markers
+    message_runtime
+    nav_core
+    nav_msgs
+    pluginlib
+    roscpp
+    std_msgs
+          tf2
+          tf2_ros
+    visualization_msgs
+    DEPENDS SUITESPARSE G2O
+  )
+elseif($ENV{ROS_DISTRO} STREQUAL "kinetic")
 catkin_package(
   INCLUDE_DIRS include ${EXTERNAL_INCLUDE_DIRS}
   LIBRARIES teb_local_planner ${EXTERNAL_LIBS}
   CATKIN_DEPENDS
-	base_local_planner
-	costmap_2d
-	costmap_converter
-	dynamic_reconfigure
-	geometry_msgs
-	interactive_markers
-	message_runtime
-	nav_core
-	nav_msgs
-	pluginlib
-	roscpp
-	std_msgs
-        tf2
-        tf2_ros
-	visualization_msgs
+  base_local_planner
+  costmap_2d
+  costmap_converter
+  dynamic_reconfigure
+  geometry_msgs
+  interactive_markers
+  message_runtime
+  nav_core
+  nav_msgs
+  pluginlib
+  roscpp
+  std_msgs
+  tf
+  tf_conversions
+  visualization_msgs
   DEPENDS SUITESPARSE G2O
 )
-
+endif()
 ###########
 ## Build ##
 ###########

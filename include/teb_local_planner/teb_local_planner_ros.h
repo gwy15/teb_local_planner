@@ -63,8 +63,15 @@
 #include <costmap_converter/ObstacleMsg.h>
 
 // transforms
-#include <tf2/utils.h>
-#include <tf2_ros/buffer.h>
+static_assert(ROS_VERSION_MAJOR == 1);
+#if ROS_VERSION_MINOR == 14 // melodic
+  #include <tf2/utils.h>
+  #include <tf2_ros/buffer.h>
+#else // kinetic
+  #include <tf/tf.h>
+  #include <tf/transform_listener.h>
+  #include <tf/transform_datatypes.h>
+#endif
 
 // costmap
 #include <costmap_2d/costmap_2d_ros.h>
@@ -102,6 +109,7 @@ public:
     */
   ~TebLocalPlannerROS();
 
+#if ROS_VERSION_MINOR == 14 // melodic
   /**
     * @brief Initializes the teb plugin
     * @param name The name of the instance
@@ -109,6 +117,15 @@ public:
     * @param costmap_ros Cost map representing occupied and free space
     */
   void initialize(std::string name, tf2_ros::Buffer *tf, costmap_2d::Costmap2DROS* costmap_ros);
+#else
+  /**
+     * @brief Initializes the teb plugin
+     * @param name The name of the instance
+     * @param tf Pointer to a transform listener
+     * @param costmap_ros Cost map representing occupied and free space
+     */
+  void initialize(std::string name, tf::TransformListener* tf, costmap_2d::Costmap2DROS* costmap_ros);
+#endif
 
   /**
     * @brief Set the plan that the teb local planner is following
@@ -253,8 +270,13 @@ protected:
     * @param dist_behind_robot Distance behind the robot that should be kept [meters]
     * @return \c true if the plan is pruned, \c false in case of a transform exception or if no pose cannot be found inside the threshold
     */
+#if ROS_VERSION_MINOR == 14 // melodic
   bool pruneGlobalPlan(const tf2_ros::Buffer& tf, const geometry_msgs::PoseStamped& global_pose,
                        std::vector<geometry_msgs::PoseStamped>& global_plan, double dist_behind_robot=1);
+#else
+  bool pruneGlobalPlan(const tf::TransformListener& tf, const tf::Stamped<tf::Pose>& global_pose,
+                       std::vector<geometry_msgs::PoseStamped>& global_plan, double dist_behind_robot=1);
+#endif
   
   /**
     * @brief  Transforms the global plan of the robot from the planner frame to the local frame (modified).
@@ -273,11 +295,17 @@ protected:
     * @param[out] tf_plan_to_global Transformation between the global plan and the global planning frame
     * @return \c true if the global plan is transformed, \c false otherwise
     */
+#if ROS_VERSION_MINOR == 14
   bool transformGlobalPlan(const tf2_ros::Buffer& tf, const std::vector<geometry_msgs::PoseStamped>& global_plan,
                            const geometry_msgs::PoseStamped& global_pose,  const costmap_2d::Costmap2D& costmap,
                            const std::string& global_frame, double max_plan_length, std::vector<geometry_msgs::PoseStamped>& transformed_plan,
                            int* current_goal_idx = NULL, geometry_msgs::TransformStamped* tf_plan_to_global = NULL) const;
-    
+#else
+  bool transformGlobalPlan(const tf::TransformListener& tf, const std::vector<geometry_msgs::PoseStamped>& global_plan,
+                           const tf::Stamped<tf::Pose>& global_pose,  const costmap_2d::Costmap2D& costmap,
+                           const std::string& global_frame, double max_plan_length, std::vector<geometry_msgs::PoseStamped>& transformed_plan,
+                           int* current_goal_idx = NULL, tf::StampedTransform* tf_plan_to_global = NULL) const;
+#endif
   /**
     * @brief Estimate the orientation of a pose from the global_plan that is treated as a local goal for the local planner.
     * 
@@ -293,8 +321,13 @@ protected:
     * @param moving_average_length number of future poses of the global plan to be taken into account
     * @return orientation (yaw-angle) estimate
     */
+#if ROS_VERSION_MINOR == 14
   double estimateLocalGoalOrientation(const std::vector<geometry_msgs::PoseStamped>& global_plan, const geometry_msgs::PoseStamped& local_goal,
                                       int current_goal_idx, const geometry_msgs::TransformStamped& tf_plan_to_global, int moving_average_length=3) const;
+#else
+  double estimateLocalGoalOrientation(const std::vector<geometry_msgs::PoseStamped>& global_plan, const tf::Stamped<tf::Pose>& local_goal,
+                                      int current_goal_idx, const tf::StampedTransform& tf_plan_to_global, int moving_average_length=3) const;
+#endif
         
         
   /**
@@ -353,7 +386,11 @@ private:
   // external objects (store weak pointers)
   costmap_2d::Costmap2DROS* costmap_ros_; //!< Pointer to the costmap ros wrapper, received from the navigation stack
   costmap_2d::Costmap2D* costmap_; //!< Pointer to the 2d costmap (obtained from the costmap ros wrapper)
+#if ROS_VERSION_MINOR == 14
   tf2_ros::Buffer* tf_; //!< pointer to tf buffer
+#else
+  tf::TransformListener* tf_; //!< pointer to Transform Listener
+#endif
     
   // internal objects (memory management owned)
   PlannerInterfacePtr planner_; //!< Instance of the underlying optimal planner class
