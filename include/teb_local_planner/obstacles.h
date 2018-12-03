@@ -71,7 +71,7 @@ public:
   /**
     * @brief Default constructor of the abstract obstacle class
     */
-  Obstacle() : dynamic_(false), centroid_velocity_(Eigen::Vector2d::Zero())
+  Obstacle() : dynamic_(false), racer_(false), centroid_velocity_(Eigen::Vector2d::Zero())
   {
   }
   
@@ -193,10 +193,18 @@ public:
   }
 
   /**
-    * @brief Check if the obstacle is a moving with a (non-zero) velocity
-    * @return \c true if the obstacle is not marked as static, \c false otherwise
-    */	
+   * @brief Check if the obstacle is a moving with a (non-zero) velocity
+   * @return \c true if the obstacle is not marked as static, \c false otherwise
+   */	
   bool isDynamic() const {return dynamic_;}
+
+  /**
+   * @brief Check if the obstacle if a obstacle moving like a racer
+   * 
+   * @return true If the obstacle is moving like a racer
+   * @return false Otherwise
+   */
+  bool isRacer() const { return racer_;}
 
   /**
     * @brief Set the 2d velocity (vx, vy) of the obstacle w.r.t to the centroid
@@ -225,10 +233,10 @@ public:
       return;
 
     // currently velocity published by stage is already given in the map frame
-//    double yaw = tf::getYaw(orientation.quaternion);
-//    ROS_INFO("Yaw: %f", yaw);
-//    Eigen::Rotation2Dd rot(yaw);
-//    vel = rot * vel;
+    // double yaw = tf::getYaw(orientation.quaternion);
+    // ROS_INFO("Yaw: %f", yaw);
+    // Eigen::Rotation2Dd rot(yaw);
+    // vel = rot * vel;
     setCentroidVelocity(vel);
   }
 
@@ -282,6 +290,7 @@ public:
 protected:
 	   
   bool dynamic_; //!< Store flag if obstacle is dynamic (resp. a moving obstacle)
+  bool racer_; //!<Store flag if obstacle is a racer (resp. a intelligence obstacle)
   Eigen::Vector2d centroid_velocity_; //!< Store the corresponding velocity (vx, vy) of the centroid (zero, if _dynamic is \c true)
   
 public:	
@@ -378,22 +387,39 @@ public:
     return pos_;
   }
   
+  /**
+   * @brief Estimate the pose of this obstacle at time t.
+   * 
+   * @param t The time at which to estimate.
+   * @return Eigen::Vector2d Estimated pose.
+   */
+  virtual Eigen::Vector2d estimatePoseAtTime(double t) const {
+    if (racer_) {
+      // TODO: finish
+      return pos_;
+    } else if (dynamic_) {
+      return pos_ + t * centroid_velocity_;
+    } else {
+      return pos_;
+    }
+  }
+
   // implements getMinimumSpatioTemporalDistance() of the base class
   virtual double getMinimumSpatioTemporalDistance(const Eigen::Vector2d& position, double t) const
   {
-    return (pos_ + t*centroid_velocity_ - position).norm();
+    return (estimatePoseAtTime(t) - position).norm();
   }
 
   // implements getMinimumSpatioTemporalDistance() of the base class
   virtual double getMinimumSpatioTemporalDistance(const Eigen::Vector2d& line_start, const Eigen::Vector2d& line_end, double t) const
   {
-    return distance_point_to_segment_2d(pos_ + t*centroid_velocity_, line_start, line_end);
+    return distance_point_to_segment_2d(estimatePoseAtTime(t), line_start, line_end);
   }
 
   // implements getMinimumSpatioTemporalDistance() of the base class
   virtual double getMinimumSpatioTemporalDistance(const Point2dContainer& polygon, double t) const
   {
-    return distance_point_to_polygon_2d(pos_ + t*centroid_velocity_, polygon);
+    return distance_point_to_polygon_2d(estimatePoseAtTime(t), polygon);
   }
 
   // implements predictCentroidConstantVelocity() of the base class
@@ -522,22 +548,33 @@ public:
     return pos_ + radius_*(position-pos_).normalized();
   }
 
+  virtual Eigen::Vector2d estimatePoseAtTime(double t) const {
+    if (racer_) {
+      // TODO: finish
+      return pos_;
+    } else if (dynamic_) {
+      return pos_ + t * centroid_velocity_;
+    } else {
+      return pos_;
+    }
+  }
+
   // implements getMinimumSpatioTemporalDistance() of the base class
   virtual double getMinimumSpatioTemporalDistance(const Eigen::Vector2d& position, double t) const
   {
-    return (pos_ + t*centroid_velocity_ - position).norm() - radius_;
+    return (estimatePoseAtTime(t) - position).norm() - radius_;
   }
 
   // implements getMinimumSpatioTemporalDistance() of the base class
   virtual double getMinimumSpatioTemporalDistance(const Eigen::Vector2d& line_start, const Eigen::Vector2d& line_end, double t) const
   {
-    return distance_point_to_segment_2d(pos_ + t*centroid_velocity_, line_start, line_end) - radius_;
+    return distance_point_to_segment_2d(estimatePoseAtTime(t), line_start, line_end) - radius_;
   }
 
   // implements getMinimumSpatioTemporalDistance() of the base class
   virtual double getMinimumSpatioTemporalDistance(const Point2dContainer& polygon, double t) const
   {
-    return distance_point_to_polygon_2d(pos_ + t*centroid_velocity_, polygon) - radius_;
+    return distance_point_to_polygon_2d(estimatePoseAtTime(t), polygon) - radius_;
   }
 
   // implements predictCentroidConstantVelocity() of the base class
@@ -673,25 +710,43 @@ public:
     return closest_point_on_line_segment_2d(position, start_, end_);
   }
 
+  void estimatePoseAtTime(double t, Eigen::Vector2d& start, Eigen::Vector2d& end) const {
+    if (racer_) {
+      // TODO:  
+      start = start_;
+      end = end_;
+    } else if (dynamic_) {
+      auto offset = t * centroid_velocity_;
+      start = start_ + offset;
+      end = end_ + offset;
+    } else {
+      start = start_;
+      end = end_;
+    }
+  }
+
   // implements getMinimumSpatioTemporalDistance() of the base class
   virtual double getMinimumSpatioTemporalDistance(const Eigen::Vector2d& position, double t) const
   {
-    Eigen::Vector2d offset = t*centroid_velocity_;
-    return distance_point_to_segment_2d(position, start_ + offset, end_ + offset);
+    Eigen::Vector2d start, end;
+    estimatePoseAtTime(t, start, end);
+    return distance_point_to_segment_2d(position, start, end);
   }
 
   // implements getMinimumSpatioTemporalDistance() of the base class
   virtual double getMinimumSpatioTemporalDistance(const Eigen::Vector2d& line_start, const Eigen::Vector2d& line_end, double t) const
   {
-    Eigen::Vector2d offset = t*centroid_velocity_;
-    return distance_segment_to_segment_2d(start_ + offset, end_ + offset, line_start, line_end);
+    Eigen::Vector2d start, end;
+    estimatePoseAtTime(t, start, end);
+    return distance_segment_to_segment_2d(start, end, line_start, line_end);
   }
 
   // implements getMinimumSpatioTemporalDistance() of the base class
   virtual double getMinimumSpatioTemporalDistance(const Point2dContainer& polygon, double t) const
   {
-    Eigen::Vector2d offset = t*centroid_velocity_;
-    return distance_segment_to_polygon_2d(start_ + offset, end_ + offset, polygon);
+    Eigen::Vector2d start, end;
+    estimatePoseAtTime(t, start, end);
+    return distance_segment_to_polygon_2d(start, end, polygon);
   }
 
   // implements getCentroid() of the base class
@@ -863,10 +918,17 @@ public:
   {
     // Predict obstacle (polygon) at time t
     pred_vertices.resize(vertices_.size());
-    Eigen::Vector2d offset = t*centroid_velocity_;
-    for (std::size_t i = 0; i < vertices_.size(); i++)
-    {
-      pred_vertices[i] = vertices_[i] + offset;
+    if (racer_) {
+      // TODO: finish
+      pred_vertices = vertices_;
+    } else if (dynamic_) {
+      Eigen::Vector2d offset = t * centroid_velocity_;
+      for (std::size_t i = 0; i < vertices_.size(); i++)
+      {
+        pred_vertices[i] = vertices_[i] + offset;
+      }  
+    } else {
+      pred_vertices = vertices_;
     }
   }
 

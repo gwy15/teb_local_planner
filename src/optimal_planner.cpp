@@ -137,6 +137,7 @@ void TebOptimalPlanner::registerG2OTypes()
   factory->registerType("EDGE_OBSTACLE", new g2o::HyperGraphElementCreator<EdgeObstacle>);
   factory->registerType("EDGE_INFLATED_OBSTACLE", new g2o::HyperGraphElementCreator<EdgeInflatedObstacle>);
   factory->registerType("EDGE_DYNAMIC_OBSTACLE", new g2o::HyperGraphElementCreator<EdgeDynamicObstacle>);
+  factory->registerType("EDGE_RACER_OBSTACLE", new g2o::HyperGraphElementCreator<EdgeRacerObstacle>);
   factory->registerType("EDGE_VIA_POINT", new g2o::HyperGraphElementCreator<EdgeViaPoint>);
   factory->registerType("EDGE_PREFER_ROTDIR", new g2o::HyperGraphElementCreator<EdgePreferRotDir>);
   return;
@@ -327,8 +328,10 @@ bool TebOptimalPlanner::buildGraph(double weight_multiplier)
   else
     AddEdgesObstacles(weight_multiplier);
 
-  if (cfg_->obstacles.include_dynamic_obstacles)
+  if (cfg_->obstacles.include_dynamic_obstacles) {
     AddEdgesDynamicObstacles();
+    AddEdgesRacerObstacles();
+  }
   
   AddEdgesViaPoints();
   
@@ -653,7 +656,7 @@ void TebOptimalPlanner::AddEdgesDynamicObstacles(double weight_multiplier)
   
   for (ObstContainer::const_iterator obst = obstacles_->begin(); obst != obstacles_->end(); ++obst)
   {
-    if (!(*obst)->isDynamic())
+    if (!(*obst)->isDynamic() || (*obst)->isRacer())
       continue;
 
     // Skip first and last pose, as they are fixed
@@ -669,6 +672,36 @@ void TebOptimalPlanner::AddEdgesDynamicObstacles(double weight_multiplier)
     }
   }
 }
+
+void TebOptimalPlanner::AddEdgesRacerObstacles(double weight_multiplier)
+{
+  if (cfg_->optim.weight_obstacle==0 || weight_multiplier==0 || obstacles_==NULL )
+    return; // if weight equals zero skip adding edges!
+
+  Eigen::Matrix<double,2,2> information;
+  information(0,0) = cfg_->optim.weight_dynamic_obstacle * weight_multiplier;
+  information(1,1) = cfg_->optim.weight_dynamic_obstacle_inflation;
+  information(0,1) = information(1,0) = 0;
+  
+  for (ObstContainer::const_iterator obst = obstacles_->begin(); obst != obstacles_->end(); ++obst)
+  {
+    if (!(*obst)->isDynamic() || !(*obst)->isRacer())
+      continue;
+
+    // Skip first and last pose, as they are fixed
+    double time = teb_.TimeDiff(0);
+    for (int i=1; i < teb_.sizePoses() - 1; ++i)
+    {
+      EdgeRacerObstacle* racerObsEdge = new EdgeRacerObstacle(time);
+      racerObsEdge->setVertex(0,teb_.PoseVertex(i));
+      racerObsEdge->setInformation(information);
+      racerObsEdge->setParameters(*cfg_, robot_model_.get(), obst->get());
+      optimizer_->addEdge(racerObsEdge);
+      time += teb_.TimeDiff(i); // we do not need to check the time diff bounds, since we iterate to "< sizePoses()-1".
+    }
+  }
+}
+
 
 void TebOptimalPlanner::AddEdgesViaPoints()
 {

@@ -66,6 +66,7 @@
 #include <teb_local_planner/g2o_types/edge_time_optimal.h>
 #include <teb_local_planner/g2o_types/edge_obstacle.h>
 #include <teb_local_planner/g2o_types/edge_dynamic_obstacle.h>
+#include <teb_local_planner/g2o_types/edge_racer_obstacle.h>
 #include <teb_local_planner/g2o_types/edge_via_point.h>
 #include <teb_local_planner/g2o_types/edge_prefer_rotdir.h>
 
@@ -645,6 +646,13 @@ protected:
 
    */
   void AddEdgesDynamicObstacles(double weight_multiplier=1.0);
+
+  /**
+   * @brief Add all edges (local cost functions) related to keeping a distance from racer obstacles.
+   * @warning experimental
+   * @param weight_multiplier Specify an additional weight multipler (in addition to the the config weight)
+   */
+  void AddEdgesRacerObstacles(double weight_multiplier=1.0);
 
   /**
    * @brief Add all edges (local cost functions) for satisfying kinematic constraints of a differential drive robot

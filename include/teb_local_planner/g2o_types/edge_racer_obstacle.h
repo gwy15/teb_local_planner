@@ -2,8 +2,8 @@
  *
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2016,
- *  TU Dortmund - Institute of Control Theory and Systems Engineering.
+ *  Copyright (c) 2018,
+ *  Weiyu Guan - Tsinghua University.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -38,13 +38,13 @@
  * g2o-framework. g2o is licensed under the terms of the BSD License.
  * Refer to the base class source for detailed licensing information.
  *
- * Author: Christoph Rösmann, Franz Albers
+ * Author: Weiyu Guan
  *********************************************************************/
 
-#ifndef EDGE_DYNAMICOBSTACLE_H
-#define EDGE_DYNAMICOBSTACLE_H
+#ifndef EDGE_RACER_OBSTACLE_H
+#define EDGE_RACER_OBSTACLE_H
 
-#include <teb_local_planner/g2o_types/vertex_pose.h>
+#include "teb_local_planner/g2o_types/vertex_pose.h"
 #include <teb_local_planner/g2o_types/vertex_timediff.h>
 #include <teb_local_planner/g2o_types/penalties.h>
 #include <teb_local_planner/g2o_types/base_teb_edges.h>
@@ -56,8 +56,8 @@ namespace teb_local_planner
 {
   
 /**
- * @class EdgeDynamicObstacle
- * @brief Edge defining the cost function for keeping a distance from dynamic (moving) obstacles.
+ * @class EdgeRacerObstacle
+ * @brief Edge defining the cost function for keeping a distance from dynamic (moving) racer obstacles.
  * 
  * The edge depends on two vertices \f$ \mathbf{s}_i, \Delta T_i \f$ and minimizes: \n
  * \f$ \min \textrm{penaltyBelow}( dist2obstacle) \cdot weight \f$. \n
@@ -68,14 +68,14 @@ namespace teb_local_planner
  * @remarks Do not forget to call setTebConfig(), setVertexIdx() and 
  * @warning Experimental
  */  
-class EdgeDynamicObstacle : public BaseTebUnaryEdge<2, const Obstacle*, VertexPose>
+class EdgeRacerObstacle : public BaseTebUnaryEdge<2, const Obstacle*, VertexPose>
 {
 public:
   
   /**
    * @brief Construct edge.
    */    
-  EdgeDynamicObstacle() : t_(0)
+  EdgeRacerObstacle() : t_(0)
   {
   }
   
@@ -83,7 +83,7 @@ public:
    * @brief Construct edge and specify the time for its associated pose (neccessary for computeError).
    * @param t_ Estimated time until current pose is reached
    */      
-  EdgeDynamicObstacle(double t) : t_(t)
+  EdgeRacerObstacle(double t) : t_(t)
   {
   }
   
@@ -92,28 +92,17 @@ public:
    */   
   void computeError()
   {
-    ROS_ASSERT_MSG(cfg_ && _measurement && robot_model_, "You must call setTebConfig(), setObstacle() and setRobotModel() on EdgeDynamicObstacle()");
+    ROS_ASSERT_MSG(cfg_ && _measurement && robot_model_, "You must call setTebConfig(), setObstacle() and setRobotModel() on EdgeRacerObstacle()");
     const VertexPose* bandpt = static_cast<const VertexPose*>(_vertices[0]);
     
     double dist = robot_model_->estimateSpatioTemporalDistance(bandpt->pose(), _measurement, t_);
-    // double dist = estimateSpatioTemporalDistance();
 
     _error[0] = penaltyBoundFromBelow(dist, cfg_->obstacles.min_obstacle_dist, cfg_->optim.penalty_epsilon);
     _error[1] = penaltyBoundFromBelow(dist, cfg_->obstacles.dynamic_obstacle_inflation_dist, 0.0);
 
-    ROS_ASSERT_MSG(std::isfinite(_error[0]), "EdgeDynamicObstacle::computeError() _error[0]=%f\n",_error[0]);
+    ROS_ASSERT_MSG(std::isfinite(_error[0]), "EdgeRacerObstacle::computeError() _error[0]=%f\n",_error[0]);
   }
   
-  // double estimateSpatioTemporalDistance() {
-  //   const PoseSE2 robotPose = static_cast<const VertexPose*>(_vertices[0])->pose();
-  //   const Obstacle* obstacle = _measurement;
-  //   const double& t = t_;
-
-  //   // TODO: calculate the distance
-  //   double dist = robot_model_->estimateSpatioTemporalDistance(robotPose, obstacle, t);
-
-  //   return dist;
-  // }
   
   /**
    * @brief Set Obstacle for the underlying cost function
