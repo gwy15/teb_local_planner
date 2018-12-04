@@ -1100,6 +1100,13 @@ void TebOptimalPlanner::computeCurrentCost(double obst_cost_scale, double viapoi
       cost_ += edge_dyn_obstacle->getError().squaredNorm() * obst_cost_scale;
       continue;
     }
+
+    EdgeRacerObstacle* edge_racer_obstacle = dynamic_cast<EdgeRacerObstacle*>(*it);
+    if (edge_racer_obstacle!=NULL)
+    {
+      cost_ += edge_racer_obstacle->getError().squaredNorm() * obst_cost_scale;
+      continue;
+    }
     
     EdgeViaPoint* edge_viapoint = dynamic_cast<EdgeViaPoint*>(*it);
     if (edge_viapoint!=NULL)
