@@ -111,19 +111,19 @@ public:
 
 #if ROS_VERSION_MINOR == 14 // melodic
   /**
-    * @brief Initializes the teb plugin
-    * @param name The name of the instance
-    * @param tf Pointer to a tf buffer
-    * @param costmap_ros Cost map representing occupied and free space
-    */
+   * @brief Initializes the teb plugin
+   * @param name The name of the instance
+   * @param tf Pointer to a tf buffer
+   * @param costmap_ros Cost map representing occupied and free space
+   */
   void initialize(std::string name, tf2_ros::Buffer *tf, costmap_2d::Costmap2DROS* costmap_ros);
 #else
   /**
-     * @brief Initializes the teb plugin
-     * @param name The name of the instance
-     * @param tf Pointer to a transform listener
-     * @param costmap_ros Cost map representing occupied and free space
-     */
+   * @brief Initializes the teb plugin
+   * @param name The name of the instance
+   * @param tf Pointer to a transform listener
+   * @param costmap_ros Cost map representing occupied and free space
+   */
   void initialize(std::string name, tf::TransformListener* tf, costmap_2d::Costmap2DROS* costmap_ros);
 #endif
 
