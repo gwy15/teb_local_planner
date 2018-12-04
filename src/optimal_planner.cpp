@@ -243,6 +243,7 @@ void TebOptimalPlanner::setVelocityGoal(const geometry_msgs::Twist& vel_goal)
 bool TebOptimalPlanner::plan(const std::vector<geometry_msgs::PoseStamped>& initial_plan, const geometry_msgs::Twist* start_vel, bool free_goal_vel)
 {    
   ROS_ASSERT_MSG(initialized_, "Call initialize() first.");
+  _initPlan = initial_plan;
   if (!teb_.isInit())
   {
     // init trajectory
@@ -692,7 +693,7 @@ void TebOptimalPlanner::AddEdgesRacerObstacles(double weight_multiplier)
     double time = teb_.TimeDiff(0);
     for (int i=1; i < teb_.sizePoses() - 1; ++i)
     {
-      EdgeRacerObstacle* racerObsEdge = new EdgeRacerObstacle(time);
+      EdgeRacerObstacle* racerObsEdge = new EdgeRacerObstacle(time, &_initPlan);
       racerObsEdge->setVertex(0,teb_.PoseVertex(i));
       racerObsEdge->setInformation(information);
       racerObsEdge->setParameters(*cfg_, robot_model_.get(), obst->get());

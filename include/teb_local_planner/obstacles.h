@@ -56,6 +56,7 @@
 #include <tf/tf.h>
 #include <teb_local_planner/distance_calculations.h>
 
+using PathPtr = typename std::vector<geometry_msgs::PoseStamped>*;
 
 namespace teb_local_planner
 {
@@ -71,7 +72,7 @@ public:
   /**
     * @brief Default constructor of the abstract obstacle class
     */
-  Obstacle() : dynamic_(false), racer_(false), centroid_velocity_(Eigen::Vector2d::Zero())
+  Obstacle() : dynamic_(false), racer_(false), centroid_velocity_(Eigen::Vector2d::Zero()), _initPath(nullptr)
   {
   }
   
@@ -82,6 +83,9 @@ public:
   {
   }
 
+  void setInitPath(PathPtr path) const {
+    const_cast<Obstacle*>(this)->_initPath = path;
+  }
 
   /** @name Centroid coordinates (abstract, obstacle type depending) */
   //@{ 
@@ -293,6 +297,8 @@ protected:
   bool racer_; //!<Store flag if obstacle is a racer (resp. a intelligence obstacle)
   Eigen::Vector2d centroid_velocity_; //!< Store the corresponding velocity (vx, vy) of the centroid (zero, if _dynamic is \c true)
   
+  PathPtr _initPath;
+
 public:	
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

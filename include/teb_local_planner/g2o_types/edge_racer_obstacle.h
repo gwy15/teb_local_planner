@@ -83,7 +83,8 @@ public:
    * @brief Construct edge and specify the time for its associated pose (neccessary for computeError).
    * @param t_ Estimated time until current pose is reached
    */      
-  EdgeRacerObstacle(double t) : t_(t)
+  EdgeRacerObstacle(double t, std::vector<geometry_msgs::PoseStamped>* initPlan) :
+    t_(t), _initPlan(initPlan)
   {
   }
   
@@ -95,6 +96,9 @@ public:
     ROS_ASSERT_MSG(cfg_ && _measurement && robot_model_, "You must call setTebConfig(), setObstacle() and setRobotModel() on EdgeRacerObstacle()");
     const VertexPose* bandpt = static_cast<const VertexPose*>(_vertices[0]);
     
+    // pass init path to obstacle
+    _measurement->setInitPath(_initPlan);
+
     double dist = robot_model_->estimateSpatioTemporalDistance(bandpt->pose(), _measurement, t_);
 
     _error[0] = penaltyBoundFromBelow(dist, cfg_->obstacles.min_obstacle_dist, cfg_->optim.penalty_epsilon);
@@ -139,7 +143,8 @@ protected:
   
   const BaseRobotFootprintModel* robot_model_; //!< Store pointer to robot_model
   double t_; //!< Estimated time until current pose is reached
-  
+  std::vector<geometry_msgs::PoseStamped>* _initPlan;
+
 public: 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
