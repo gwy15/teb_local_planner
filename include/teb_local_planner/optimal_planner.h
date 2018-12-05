@@ -79,6 +79,8 @@
 #include <nav_msgs/Odometry.h>
 #include <limits.h>
 
+using PlanType = typename std::vector<geometry_msgs::PoseStamped>;
+
 namespace teb_local_planner
 {
 
@@ -144,6 +146,9 @@ public:
   void initialize(const TebConfig& cfg, ObstContainer* obstacles = NULL, RobotFootprintModelPtr robot_model = boost::make_shared<PointRobotFootprint>(),
                   TebVisualizationPtr visual = TebVisualizationPtr(), const ViaPointContainer* via_points = NULL);
   
+  virtual void setInitPlan(const PlanType& initPlan) {
+    _initPlan = initPlan;
+  }
   
 
   /** @name Plan a trajectory  */
@@ -166,7 +171,7 @@ public:
    *		      otherwise the final velocity will be zero (default: false)
    * @return \c true if planning was successful, \c false otherwise
    */
-  virtual bool plan(const std::vector<geometry_msgs::PoseStamped>& initial_plan, const geometry_msgs::Twist* start_vel = NULL, bool free_goal_vel=false);
+  virtual bool plan(const PlanType& initial_plan, const geometry_msgs::Twist* start_vel = NULL, bool free_goal_vel=false);
   
   /**
    * @brief Plan a trajectory between a given start and goal pose (tf::Pose version)
@@ -523,7 +528,7 @@ public:
    * @param initial_plan The intial and transformed plan (part of the local map and pruned up to the robot position)
    * @return \c true, if the planner suggests a shorter horizon, \c false otherwise.
    */
-  virtual bool isHorizonReductionAppropriate(const std::vector<geometry_msgs::PoseStamped>& initial_plan) const;
+  virtual bool isHorizonReductionAppropriate(const PlanType& initial_plan) const;
   
   //@}
   
@@ -708,7 +713,7 @@ protected:
   bool initialized_; //!< Keeps track about the correct initialization of this class
   bool optimized_; //!< This variable is \c true as long as the last optimization has been completed successful
   
-  std::vector<geometry_msgs::PoseStamped> _initPlan;
+  PlanType _initPlan;
 
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW    

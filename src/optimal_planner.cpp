@@ -243,7 +243,7 @@ void TebOptimalPlanner::setVelocityGoal(const geometry_msgs::Twist& vel_goal)
 bool TebOptimalPlanner::plan(const std::vector<geometry_msgs::PoseStamped>& initial_plan, const geometry_msgs::Twist* start_vel, bool free_goal_vel)
 {    
   ROS_ASSERT_MSG(initialized_, "Call initialize() first.");
-  _initPlan = initial_plan;
+  setInitPlan(initial_plan);
   if (!teb_.isInit())
   {
     // init trajectory
