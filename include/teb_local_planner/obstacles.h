@@ -215,7 +215,11 @@ public:
     * @remarks Setting the velocity using this function marks the obstacle as dynamic (@see isDynamic)
     * @param vel 2D vector containing the velocities of the centroid in x and y directions
     */
-  void setCentroidVelocity(const Eigen::Ref<const Eigen::Vector2d>& vel) {centroid_velocity_ = vel; dynamic_=true;} 
+  void setCentroidVelocity(const Eigen::Ref<const Eigen::Vector2d>& vel) {
+    centroid_velocity_ = vel;
+    dynamic_ = true;
+    racer_ = true;
+  } 
 
   /**
     * @brief Set the 2d velocity (vx, vy) of the obstacle w.r.t to the centroid
@@ -402,6 +406,9 @@ public:
   virtual Eigen::Vector2d estimatePoseAtTime(double t) const {
     if (racer_) {
       // TODO: finish
+      // for (geometry_msgs::PoseStamped& msg: *_initPath) {
+      //   std::cout << msg << std::endl;
+      // }
       return pos_;
     } else if (dynamic_) {
       return pos_ + t * centroid_velocity_;
