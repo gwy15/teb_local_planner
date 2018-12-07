@@ -79,9 +79,7 @@ public:
   /**
    * @brief Virtual destructor.
    */
-  virtual ~Obstacle()
-  {
-  }
+  virtual ~Obstacle(){}
 
   void setInitPath(PathPtr path) const {
     const_cast<Obstacle*>(this)->_initPath = path;
@@ -403,19 +401,7 @@ public:
    * @param t The time at which to estimate.
    * @return Eigen::Vector2d Estimated pose.
    */
-  virtual Eigen::Vector2d estimatePoseAtTime(double t) const {
-    if (racer_) {
-      // TODO: finish
-      // for (geometry_msgs::PoseStamped& msg: *_initPath) {
-      //   std::cout << msg << std::endl;
-      // }
-      return pos_;
-    } else if (dynamic_) {
-      return pos_ + t * centroid_velocity_;
-    } else {
-      return pos_;
-    }
-  }
+  virtual Eigen::Vector2d estimatePoseAtTime(double t) const;
 
   // implements getMinimumSpatioTemporalDistance() of the base class
   virtual double getMinimumSpatioTemporalDistance(const Eigen::Vector2d& position, double t) const

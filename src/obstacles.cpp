@@ -41,8 +41,48 @@
 #include <ros/assert.h>
 // #include <teb_local_planner/misc.h>
 
+#include <chrono>
+class SpeedCounter {
+  std::chrono::high_resolution_clock _timer;
+  decltype(_timer.now()) _nextTimeToLog;
+  long long _count = 0;
+  const decltype(std::chrono::seconds(1)) _1s = std::chrono::seconds(1);
+public:
+  SpeedCounter(): _timer(), _count(0) {
+    _nextTimeToLog = _timer.now() + _1s;
+  }
+  virtual ~SpeedCounter(){}
+
+  void count() {
+    _count += 1;
+    if (_timer.now() > _nextTimeToLog) {
+      _nextTimeToLog += _1s;
+      std::cout << "Invoked " << _count << " times in 1s." << std::endl;
+      _count = 0;
+    }
+  }
+};
+
 namespace teb_local_planner
 {
+auto counter = SpeedCounter();
+
+Eigen::Vector2d PointObstacle::estimatePoseAtTime(double t) const {
+  // std::cout << "estimatePose... racer_: " << racer_ << ", dynamic_: " << dynamic_ << std::endl;
+  if (racer_) {
+    // TODO: finish
+    counter.count();
+    // std::cout << "_initPath.size = " << _initPath->size() << std::endl;
+    // for (geometry_msgs::PoseStamped& msg: *_initPath) {
+    //   std::cout << msg << std::endl;
+    // }
+    return pos_ + t * centroid_velocity_;
+  } else if (dynamic_) {
+    return pos_ + t * centroid_velocity_;
+  } else {
+    return pos_;
+  }
+}
 
 
 void PolygonObstacle::fixPolygonClosure()
