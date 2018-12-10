@@ -45,6 +45,7 @@
 #include <Eigen/Geometry>
 
 #include <complex>
+#include <unordered_map>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/pointer_cast.hpp>
@@ -459,7 +460,7 @@ public:
 protected:
   
   Eigen::Vector2d pos_; //!< Store the position of the PointObstacle
-  
+  std::unordered_map<double, Eigen::Vector2d> estimatedPos_;
   	
 public:	
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW  
