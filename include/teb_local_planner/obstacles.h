@@ -62,6 +62,8 @@ using PathPtr = typename std::vector<geometry_msgs::PoseStamped>*;
 namespace teb_local_planner
 {
 
+void calcRho(PathPtr, std::vector<double>&);
+
 /**
  * @class Obstacle
  * @brief Abstract class that defines the interface for modelling obstacles
@@ -83,7 +85,11 @@ public:
   virtual ~Obstacle(){}
 
   void setInitPath(PathPtr path) const {
-    const_cast<Obstacle*>(this)->_initPath = path;
+    auto that = const_cast<Obstacle*>(this);
+    that->_initPath = path;
+    that->_rho.reserve(path->size());
+    // TODO: pre calculate and store directly.
+    calcRho(path, that->_rho);
   }
 
   /** @name Centroid coordinates (abstract, obstacle type depending) */
@@ -301,6 +307,7 @@ protected:
   Eigen::Vector2d centroid_velocity_; //!< Store the corresponding velocity (vx, vy) of the centroid (zero, if _dynamic is \c true)
   
   PathPtr _initPath;
+  std::vector<double> _rho;
 
 public:	
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW

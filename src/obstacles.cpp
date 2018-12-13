@@ -69,28 +69,122 @@ namespace teb_local_planner
 auto totalCounter = SpeedCounter("total counter");
 auto calcCounter = SpeedCounter("calc counter");
 
+using _Type = const geometry_msgs::PoseStamped &;
+double calcR(_Type p1, _Type p2, _Type p3) {
+  double x1 = p1.pose.position.x, y1 = p1.pose.position.y;
+  double x2 = p2.pose.position.x, y2 = p2.pose.position.y;
+  double x3 = p3.pose.position.x, y3 = p3.pose.position.y;
+
+  double a = x1 - x2, b =  y1 - y2, c = x1 - x3, d = y1 - y3;
+  double e = ((x1 * x1 - x2 * x2) - (y2 * y2 - y1 * y1)) / 2.0;
+  double f = ((x1 * x1 - x3 * x3) - (y3 * y3 - y1 * y1)) / 2.0;
+  double x0 = - (d * e - b * f) / (b * c - a * d);
+  double y0 = - (a * f - c * e) / (b * c - a * d);
+
+  double r = std::sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1));
+  return r;
+}
+
+void calcRho(PathPtr path, std::vector<double>& rho) {
+  const auto& begin = path->begin();
+  const auto& last = (--path->end());
+  
+  double r = 0.0;
+  for (auto iter = path->begin(); iter != path->end(); iter++) {
+    if (iter == begin || iter == last) {
+      r = 10.0; // ignore the first and last one
+    } else {
+      r = calcR(*(iter-1), *iter, *(iter+1));
+    }
+    rho.push_back(r);
+  }
+}
+
+inline Eigen::Vector2d Pose2Vec2d(const geometry_msgs::PoseStamped& pose) {
+  return Eigen::Vector2d(pose.pose.position.x, pose.pose.position.y);
+}
 
 Eigen::Vector2d PointObstacle::estimatePoseAtTime(double t) const {
-  if (racer_) {
-    // TODO: finish
-    totalCounter.count();
-    auto&& findResult = estimatedPos_.find(t);
-    if (findResult != estimatedPos_.end()) {
-      // found stashed estimation, return directly.
-      return findResult->second;
-    } else {
-      // not found, calc.
-      calcCounter.count();
-      // TODO:
-      const Eigen::Vector2d&& pose = pos_ + t * centroid_velocity_;
-      // stash data for further use.
-      const_cast<PointObstacle*>(this)->estimatedPos_.insert({t, pose});
-      return pose;
-    }
-  } else if (dynamic_) {
-    return pos_ + t * centroid_velocity_;
-  } else {
+  // static obstacle
+  if (!dynamic_ && !racer_ ) {
     return pos_;
+  }
+  // dynamic obstacle, but not racer
+  else if (dynamic_ && !racer_) {
+    return pos_ + t * centroid_velocity_;
+  }
+  // racer obstacles
+  // put this block in a else statement to avoid extra memory allocate
+  else {
+    // counter for racer obstacle
+    totalCounter.count();
+
+    // if found stashed estimation, return directly.
+    auto && findResult = estimatedPos_.find(t);
+    if (findResult != estimatedPos_.end()) {
+      return findResult->second;
+    }
+
+    // counter for re-calculated obstacle
+    calcCounter.count();
+
+    // find the closest first
+    auto startIndex = 0;
+    Eigen::Vector2d startPose;
+    { // for loop to find start pose
+      auto index = 0;
+      for (; index<_initPath->size()-1; index++) {
+        auto && p0 = Pose2Vec2d(_initPath->at(index));
+        auto && p1 = Pose2Vec2d(_initPath->at(index+1));
+        auto _cos = (p1 - p0).dot(pos_ - p0);
+        if (_cos > 0) {
+          continue;
+        } else {
+          startIndex = index;
+          startPose = p0;
+          break;
+        }
+      }
+      // failed to find start pose, fallback to constant velocity.
+      if (index == _initPath->size()-2) {
+        return pos_ + t * centroid_velocity_;
+      }
+    }
+    
+    // normal
+    // since (p1-p0).(pos_-p0) is near 0, we can use |startPose-p0| as d_n
+    auto && poseToStart  = pos_ - startPose; // cache to deduce calculation
+    auto && d_n_0 = poseToStart.norm();
+    // projection of v on direction poseToStart
+    auto && v_n_0 = poseToStart.dot(centroid_velocity_) / d_n_0;
+    
+    // tangent
+    double v_tau;
+    {
+      auto && p0 = startPose;
+      auto && p1 = Pose2Vec2d(_initPath->at(startIndex + 1));
+      auto && p10 = p1 - p0;
+      v_tau = centroid_velocity_.dot(p10) / p10.norm();
+    }
+    double tm = 0.0;
+    for (auto i=startIndex; i<_initPath->size()-1; i++) {
+      auto && p0 = Pose2Vec2d(_initPath->at(i));
+      auto && p1 = Pose2Vec2d(_initPath->at(i+1));
+      v_tau = v_tau; // TODO:
+
+      tm += (p1 - p0).norm() / v_tau;
+    }
+
+    // Calculate final pose
+    Eigen::Vector2d pose;
+    {
+      // TODO:
+      pose = pos_ + t * centroid_velocity_;
+    }
+
+    // stash data for further use.
+    const_cast<PointObstacle*>(this)->estimatedPos_.insert({t, pose});
+    return pose;
   }
 }
 
