@@ -104,6 +104,13 @@ inline Eigen::Vector2d Pose2Vec2d(const geometry_msgs::PoseStamped& pose) {
   return Eigen::Vector2d(pose.pose.position.x, pose.pose.position.y);
 }
 
+inline double getIdealTangentialVelocityWithRho(const double rho) {
+  constexpr const double vm = 5.0, v1 = 2.5;
+  constexpr const double ratio = vm / v1;
+  const double _temp = 1 + (std::pow(ratio, 4.0) - 1) / (rho * rho);
+  return vm / std::pow(_temp, 0.25);
+}
+
 Eigen::Vector2d PointObstacle::estimatePoseAtTime(double t) const {
   // static obstacle
   if (!dynamic_ && !racer_ ) {
@@ -128,8 +135,8 @@ Eigen::Vector2d PointObstacle::estimatePoseAtTime(double t) const {
     // counter for re-calculated obstacle
     calcCounter.count();
 
-    // find the closest first
-    auto startIndex = 0;
+    // ============== find the closest first pose as start pose ===========
+    std::size_t startIndex = 0;
     Eigen::Vector2d startPose;
     { // for loop to find start pose
       auto index = 0;
@@ -150,35 +157,68 @@ Eigen::Vector2d PointObstacle::estimatePoseAtTime(double t) const {
         return pos_ + t * centroid_velocity_;
       }
     }
-    
-    // normal
+    // ================== output: startIndex, startPose ===================
+
+    // ======================== normal direction ==========================
     // since (p1-p0).(pos_-p0) is near 0, we can use |startPose-p0| as d_n
     auto && poseToStart  = pos_ - startPose; // cache to deduce calculation
     auto && d_n_0 = poseToStart.norm();
     // projection of v on direction poseToStart
     auto && v_n_0 = poseToStart.dot(centroid_velocity_) / d_n_0;
+    {// calc direction
+      auto && p = Pose2Vec2d(_initPath->at(startIndex + 1)) - startPose;
+      const auto & v = centroid_velocity_;
+      v_n_0 *= p[0] * v[1] - p[1] * v[0] > 0 ? 1.0: -1.0;
+    }
+    // =================== output: d_n_0 and v_n_0 =======================
     
-    // tangent
-    double v_tau;
-    {
+    // ======================= tangent direction =========================
+    double v_tau_0;
+    { // calculate v_tau
       auto && p0 = startPose;
       auto && p1 = Pose2Vec2d(_initPath->at(startIndex + 1));
       auto && p10 = p1 - p0;
-      v_tau = centroid_velocity_.dot(p10) / p10.norm();
+      v_tau_0 = centroid_velocity_.dot(p10) / p10.norm();
     }
-    double tm = 0.0;
+    double v_tau_ideal_0 = getIdealTangentialVelocityWithRho(_rho.at(startIndex));
+    double delta_v_tau_0 = v_tau_0 - v_tau_ideal_0;
+
+    const double t_tau = 3.0; // TODO:
+
+    double tm = 0.0; // time for loop
+    std::size_t finalIndex = startIndex;
+    double v_tau = 0.0; // v_tau
+
     for (auto i=startIndex; i<_initPath->size()-1; i++) {
+      if (i == _initPath->size() - 2) {
+        // moving out of path
+        return pos_ + t * centroid_velocity_;
+      }
       auto && p0 = Pose2Vec2d(_initPath->at(i));
       auto && p1 = Pose2Vec2d(_initPath->at(i+1));
-      v_tau = v_tau; // TODO:
+      
+      auto rho = _rho.at(i);
+      auto v_tau_ideal = getIdealTangentialVelocityWithRho(rho);
+      v_tau = v_tau_ideal + delta_v_tau_0 * std::exp(-tm / t_tau);
 
       tm += (p1 - p0).norm() / v_tau;
+      if (tm > t) {
+        finalIndex = i;
+        break;
+      }
     }
 
     // Calculate final pose
     Eigen::Vector2d pose;
     {
+      constexpr const double omega_n = 2.0;
       // TODO:
+      auto basePose = Pose2Vec2d(_initPath->at(finalIndex));
+      auto baseDirection = Pose2Vec2d(_initPath->at(finalIndex + 1));
+      double expFactor = std::exp(-omega_n * t);
+      double d_n = (d_n_0 + (v_n_0 + omega_n * d_n_0) * t) * expFactor;
+      double v_n = (v_n_0 - (v_n_0 + omega_n * d_n_0) * omega_n * t) * expFactor;
+
       pose = pos_ + t * centroid_velocity_;
     }
 
