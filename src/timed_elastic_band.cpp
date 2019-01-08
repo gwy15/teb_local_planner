@@ -279,7 +279,7 @@ double TimedElasticBand::getAccumulatedDistance() const
   return dist;
 }
 
-bool TimedElasticBand::initTrajectoryToGoal(const PoseSE2& start, const PoseSE2& goal, double diststep, double max_vel_x, int min_samples, bool guess_backwards_motion)
+bool TimedElasticBand::initTrajectoryToGoal(const PoseSE2& start, const PoseSE2& goal, double diststep, double max_vel_x, int min_samples, bool guess_backwards_motion, bool endLine)
 {
   if (!isInit())
   {   
@@ -331,7 +331,10 @@ bool TimedElasticBand::initTrajectoryToGoal(const PoseSE2& start, const PoseSE2&
     // add goal
     if (max_vel_x > 0) timestep = (goal.position()-BackPose().position()).norm()/max_vel_x;
     addPoseAndTimeDiff(goal,timestep); // add goal point
-    setPoseVertexFixed(sizePoses()-1,true); // GoalConf is a fixed constraint during optimization	
+    if (!endLine)
+      setPoseVertexFixed(sizePoses()-1,true); // GoalConf is a fixed constraint during optimization	
+    else;
+      // pass;
   }
   else // size!=0
   {
@@ -343,7 +346,7 @@ bool TimedElasticBand::initTrajectoryToGoal(const PoseSE2& start, const PoseSE2&
 }
 
 
-bool TimedElasticBand::initTrajectoryToGoal(const std::vector<geometry_msgs::PoseStamped>& plan, double max_vel_x, bool estimate_orient, int min_samples, bool guess_backwards_motion)
+bool TimedElasticBand::initTrajectoryToGoal(const std::vector<geometry_msgs::PoseStamped>& plan, double max_vel_x, bool estimate_orient, int min_samples, bool guess_backwards_motion, bool endLine)
 {
   
   if (!isInit())
@@ -398,7 +401,10 @@ bool TimedElasticBand::initTrajectoryToGoal(const std::vector<geometry_msgs::Pos
     // Now add final state with given orientation
     if (max_vel_x > 0) dt = (goal.position()-BackPose().position()).norm()/max_vel_x;
     addPoseAndTimeDiff(goal, dt);
-    setPoseVertexFixed(sizePoses()-1,true); // GoalConf is a fixed constraint during optimization
+    if (!endLine)
+      setPoseVertexFixed(sizePoses()-1,true); // GoalConf is a fixed constraint during optimization
+    else;
+      // pass
   }
   else // size!=0
   {

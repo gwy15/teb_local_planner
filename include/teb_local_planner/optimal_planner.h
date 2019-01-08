@@ -95,6 +95,8 @@ typedef g2o::LinearSolverCSparse<TEBBlockSolver::PoseMatrixType> TEBLinearSolver
 //! Typedef for a container storing via-points
 typedef std::vector< Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > ViaPointContainer;
 
+//! Typedef for end line
+typedef std::tuple<Eigen::Vector2d, Eigen::Vector2d> EndLineType;
 
 /**
  * @class TebOptimalPlanner
@@ -319,7 +321,21 @@ public:
   const ViaPointContainer& getViaPoints() const {return *via_points_;}
 
   //@}
-	  
+	
+  /** @name Take end line into account */
+  //@{
+
+  /**
+   * @brief Set the End Line object
+   * 
+   * @param line pointer to a line object (can be a nullptr)
+   * @details Any previously set end line will be overwritten.
+   */
+  void setEndLine(const EndLineType* line) {end_line_ = line;}
+
+  const EndLineType& getEndLine() const {return *end_line_;}
+
+  //@}
   
   /** @name Visualization */
   //@{
@@ -708,7 +724,7 @@ protected:
   const TebConfig* cfg_; //!< Config class that stores and manages all related parameters
   ObstContainer* obstacles_; //!< Store obstacles that are relevant for planning
   const ViaPointContainer* via_points_; //!< Store via points for planning
-  std::tuple<Eigen::Vector2d, Eigen::Vector2d>* end_line_; //!< Store end line for planning
+  const EndLineType* end_line_; //!< Store end line for planning
   
   double cost_; //!< Store cost value of the current hyper-graph
   RotType prefer_rotdir_; //!< Store whether to prefer a specific initial rotation in optimization (might be activated in case the robot oscillates)
