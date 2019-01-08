@@ -68,6 +68,7 @@
 #include <teb_local_planner/g2o_types/edge_dynamic_obstacle.h>
 #include <teb_local_planner/g2o_types/edge_racer_obstacle.h>
 #include <teb_local_planner/g2o_types/edge_via_point.h>
+#include <teb_local_planner/g2o_types/edge_end_line.h>
 #include <teb_local_planner/g2o_types/edge_prefer_rotdir.h>
 
 // messages
