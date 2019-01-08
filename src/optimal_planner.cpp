@@ -47,7 +47,7 @@ namespace teb_local_planner
 
 // ============== Implementation ===================
 
-TebOptimalPlanner::TebOptimalPlanner() : cfg_(NULL), obstacles_(NULL), via_points_(NULL), cost_(HUGE_VAL), prefer_rotdir_(RotType::none),
+TebOptimalPlanner::TebOptimalPlanner() : cfg_(NULL), obstacles_(NULL), via_points_(NULL), end_line_(NULL), cost_(HUGE_VAL), prefer_rotdir_(RotType::none),
                                          robot_model_(new PointRobotFootprint()), initialized_(false), optimized_(false)
 {    
 }
@@ -336,6 +336,8 @@ bool TebOptimalPlanner::buildGraph(double weight_multiplier)
   }
   
   AddEdgesViaPoints();
+
+  AddEdgesEndLine();
   
   AddEdgesVelocity();
   
@@ -748,6 +750,22 @@ void TebOptimalPlanner::AddEdgesViaPoints()
     edge_viapoint->setParameters(*cfg_, &(*vp_it));
     optimizer_->addEdge(edge_viapoint);   
   }
+}
+
+void TebOptimalPlanner::AddEdgesEndLine()
+{
+  if (cfg_->optim.weight_endline==0 || end_line_==NULL)
+    return; // if weight equals zero skip adding edges
+  
+  Eigen::Matrix<double,1,1> information;
+  information.fill(cfg_->optim.weight_endline);
+
+  EdgeEndLine* edge_end_line = new EdgeEndLine;
+  // Set vertex as the last pose here, assuming that the last pose stands for the end point.
+  edge_end_line->setVertex(0,teb_.PoseVertex(teb_.poses().size() - 1));
+  edge_end_line->setInformation(information);
+  edge_end_line->setParameters(*cfg_, end_line_);
+  optimizer_->addEdge(edge_end_line);
 }
 
 void TebOptimalPlanner::AddEdgesVelocity()

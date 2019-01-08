@@ -640,6 +640,15 @@ protected:
    * @see optimizeGraph
    */
   void AddEdgesViaPoints();
+
+  /**
+   * @brief Add all edges (local cost functions) related to minimizing the distance to end line
+   * @see EdgeEndLine
+   * @see buildGraph
+   * @see optimizeGraph
+   * @param weight_multiplier Specify an additional weight multipler (in addition to the the config weight)
+   */
+  void AddEdgesEndLine();
   
   /**
    * @brief Add all edges (local cost functions) related to keeping a distance from dynamic (moving) obstacles.
@@ -699,6 +708,7 @@ protected:
   const TebConfig* cfg_; //!< Config class that stores and manages all related parameters
   ObstContainer* obstacles_; //!< Store obstacles that are relevant for planning
   const ViaPointContainer* via_points_; //!< Store via points for planning
+  std::tuple<Eigen::Vector2d, Eigen::Vector2d>* end_line_; //!< Store end line for planning
   
   double cost_; //!< Store cost value of the current hyper-graph
   RotType prefer_rotdir_; //!< Store whether to prefer a specific initial rotation in optimization (might be activated in case the robot oscillates)
