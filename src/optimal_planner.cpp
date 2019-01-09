@@ -288,7 +288,7 @@ bool TebOptimalPlanner::plan(const PoseSE2& start, const PoseSE2& goal, const ge
   if (!teb_.isInit())
   {
     // init trajectory
-    teb_.initTrajectoryToGoal(start, goal, 0, cfg_->robot.max_vel_x, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion), cfg_->trajectory.end_on_line; // 0 intermediate samples, but dt=1 -> autoResize will add more samples before calling first optimization
+    teb_.initTrajectoryToGoal(start, goal, 0, cfg_->robot.max_vel_x, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion, cfg_->trajectory.end_on_line); // 0 intermediate samples, but dt=1 -> autoResize will add more samples before calling first optimization
   }
   else // warm start
   {
