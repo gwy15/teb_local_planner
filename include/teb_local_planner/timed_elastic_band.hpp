@@ -46,7 +46,7 @@ namespace teb_local_planner
 template<typename BidirIter, typename Fun>
 bool TimedElasticBand::initTrajectoryToGoal(BidirIter path_start, BidirIter path_end, Fun fun_position, double max_vel_x, double max_vel_theta,
                                      boost::optional<double> max_acc_x, boost::optional<double> max_acc_theta,
-                                     boost::optional<double> start_orientation, boost::optional<double> goal_orientation, int min_samples, bool guess_backwards_motion) 
+                                     boost::optional<double> start_orientation, boost::optional<double> goal_orientation, int min_samples, bool guess_backwards_motion, bool endLine) 
 {
     Eigen::Vector2d start_position = fun_position( *path_start );
     Eigen::Vector2d goal_position = fun_position( *boost::prior(path_end) );

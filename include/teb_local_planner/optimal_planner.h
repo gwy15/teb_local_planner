@@ -68,6 +68,7 @@
 #include <teb_local_planner/g2o_types/edge_dynamic_obstacle.h>
 #include <teb_local_planner/g2o_types/edge_racer_obstacle.h>
 #include <teb_local_planner/g2o_types/edge_via_point.h>
+#include <teb_local_planner/g2o_types/edge_end_line.h>
 #include <teb_local_planner/g2o_types/edge_prefer_rotdir.h>
 
 // messages
@@ -94,6 +95,8 @@ typedef g2o::LinearSolverCSparse<TEBBlockSolver::PoseMatrixType> TEBLinearSolver
 //! Typedef for a container storing via-points
 typedef std::vector< Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > ViaPointContainer;
 
+//! Typedef for end line
+typedef std::tuple<Eigen::Vector2d, Eigen::Vector2d> EndLineType;
 
 /**
  * @class TebOptimalPlanner
@@ -318,7 +321,21 @@ public:
   const ViaPointContainer& getViaPoints() const {return *via_points_;}
 
   //@}
-	  
+	
+  /** @name Take end line into account */
+  //@{
+
+  /**
+   * @brief Set the End Line object
+   * 
+   * @param line pointer to a line object (can be a nullptr)
+   * @details Any previously set end line will be overwritten.
+   */
+  void setEndLine(const EndLineType* line) {end_line_ = line;}
+
+  const EndLineType& getEndLine() const {return *end_line_;}
+
+  //@}
   
   /** @name Visualization */
   //@{
@@ -639,6 +656,15 @@ protected:
    * @see optimizeGraph
    */
   void AddEdgesViaPoints();
+
+  /**
+   * @brief Add all edges (local cost functions) related to minimizing the distance to end line
+   * @see EdgeEndLine
+   * @see buildGraph
+   * @see optimizeGraph
+   * @param weight_multiplier Specify an additional weight multipler (in addition to the the config weight)
+   */
+  void AddEdgesEndLine();
   
   /**
    * @brief Add all edges (local cost functions) related to keeping a distance from dynamic (moving) obstacles.
@@ -698,6 +724,7 @@ protected:
   const TebConfig* cfg_; //!< Config class that stores and manages all related parameters
   ObstContainer* obstacles_; //!< Store obstacles that are relevant for planning
   const ViaPointContainer* via_points_; //!< Store via points for planning
+  const EndLineType* end_line_; //!< Store end line for planning
   
   double cost_; //!< Store cost value of the current hyper-graph
   RotType prefer_rotdir_; //!< Store whether to prefer a specific initial rotation in optimization (might be activated in case the robot oscillates)

@@ -2,8 +2,8 @@
  *
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2016,
- *  TU Dortmund - Institute of Control Theory and Systems Engineering.
+ *  Copyright (c) 2018,
+ *  Weiyu Guan - Tsinghua University.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,7 @@
  * g2o-framework. g2o is licensed under the terms of the BSD License.
  * Refer to the base class source for detailed licensing information.
  *
- * Author: Christoph Rösmann, Franz Albers
+ * Author: Weiyu Guan
  *********************************************************************/
 
 #ifndef EDGE_DYNAMICOBSTACLE_H

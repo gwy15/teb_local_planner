@@ -47,7 +47,7 @@ namespace teb_local_planner
 
 // ============== Implementation ===================
 
-TebOptimalPlanner::TebOptimalPlanner() : cfg_(NULL), obstacles_(NULL), via_points_(NULL), cost_(HUGE_VAL), prefer_rotdir_(RotType::none),
+TebOptimalPlanner::TebOptimalPlanner() : cfg_(NULL), obstacles_(NULL), via_points_(NULL), end_line_(NULL), cost_(HUGE_VAL), prefer_rotdir_(RotType::none),
                                          robot_model_(new PointRobotFootprint()), initialized_(false), optimized_(false)
 {    
 }
@@ -139,6 +139,7 @@ void TebOptimalPlanner::registerG2OTypes()
   factory->registerType("EDGE_DYNAMIC_OBSTACLE", new g2o::HyperGraphElementCreator<EdgeDynamicObstacle>);
   factory->registerType("EDGE_RACER_OBSTACLE", new g2o::HyperGraphElementCreator<EdgeRacerObstacle>);
   factory->registerType("EDGE_VIA_POINT", new g2o::HyperGraphElementCreator<EdgeViaPoint>);
+  factory->registerType("EDGE_END_LINE", new g2o::HyperGraphElementCreator<EdgeEndLine>);
   factory->registerType("EDGE_PREFER_ROTDIR", new g2o::HyperGraphElementCreator<EdgePreferRotDir>);
   return;
 }
@@ -247,7 +248,7 @@ bool TebOptimalPlanner::plan(const std::vector<geometry_msgs::PoseStamped>& init
   if (!teb_.isInit())
   {
     // init trajectory
-    teb_.initTrajectoryToGoal(initial_plan, cfg_->robot.max_vel_x, cfg_->trajectory.global_plan_overwrite_orientation, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion);
+    teb_.initTrajectoryToGoal(initial_plan, cfg_->robot.max_vel_x, cfg_->trajectory.global_plan_overwrite_orientation, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion, cfg_->trajectory.end_on_line);
   } 
   else // warm start
   {
@@ -259,7 +260,7 @@ bool TebOptimalPlanner::plan(const std::vector<geometry_msgs::PoseStamped>& init
     {
       ROS_DEBUG("New goal: distance to existing goal is higher than the specified threshold. Reinitalizing trajectories.");
       teb_.clearTimedElasticBand();
-      teb_.initTrajectoryToGoal(initial_plan, cfg_->robot.max_vel_x, true, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion);
+      teb_.initTrajectoryToGoal(initial_plan, cfg_->robot.max_vel_x, true, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion, cfg_->trajectory.end_on_line);
     }
   }
   if (start_vel)
@@ -287,7 +288,7 @@ bool TebOptimalPlanner::plan(const PoseSE2& start, const PoseSE2& goal, const ge
   if (!teb_.isInit())
   {
     // init trajectory
-    teb_.initTrajectoryToGoal(start, goal, 0, cfg_->robot.max_vel_x, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion); // 0 intermediate samples, but dt=1 -> autoResize will add more samples before calling first optimization
+    teb_.initTrajectoryToGoal(start, goal, 0, cfg_->robot.max_vel_x, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion, cfg_->trajectory.end_on_line); // 0 intermediate samples, but dt=1 -> autoResize will add more samples before calling first optimization
   }
   else // warm start
   {
@@ -297,7 +298,7 @@ bool TebOptimalPlanner::plan(const PoseSE2& start, const PoseSE2& goal, const ge
     {
       ROS_DEBUG("New goal: distance to existing goal is higher than the specified threshold. Reinitalizing trajectories.");
       teb_.clearTimedElasticBand();
-      teb_.initTrajectoryToGoal(start, goal, 0, cfg_->robot.max_vel_x, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion);
+      teb_.initTrajectoryToGoal(start, goal, 0, cfg_->robot.max_vel_x, cfg_->trajectory.min_samples, cfg_->trajectory.allow_init_with_backwards_motion, cfg_->trajectory.end_on_line);
     }
   }
   if (start_vel)
@@ -335,6 +336,9 @@ bool TebOptimalPlanner::buildGraph(double weight_multiplier)
   }
   
   AddEdgesViaPoints();
+
+  if (cfg_->trajectory.end_on_line)
+    AddEdgesEndLine();
   
   AddEdgesVelocity();
   
@@ -747,6 +751,22 @@ void TebOptimalPlanner::AddEdgesViaPoints()
     edge_viapoint->setParameters(*cfg_, &(*vp_it));
     optimizer_->addEdge(edge_viapoint);   
   }
+}
+
+void TebOptimalPlanner::AddEdgesEndLine()
+{
+  if (cfg_->optim.weight_endline==0 || end_line_==NULL)
+    return; // if weight equals zero skip adding edges
+  
+  Eigen::Matrix<double,1,1> information;
+  information.fill(cfg_->optim.weight_endline);
+
+  EdgeEndLine* edge_end_line = new EdgeEndLine;
+  // Set vertex as the last pose here, assuming that the last pose stands for the end point.
+  edge_end_line->setVertex(0,teb_.PoseVertex(teb_.poses().size() - 1));
+  edge_end_line->setInformation(information);
+  edge_end_line->setParameters(*cfg_, end_line_);
+  optimizer_->addEdge(edge_end_line);
 }
 
 void TebOptimalPlanner::AddEdgesVelocity()
